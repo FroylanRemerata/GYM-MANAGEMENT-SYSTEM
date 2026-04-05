@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import Card from '@/components/Card';
@@ -7,6 +10,23 @@ import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 
 export default function Members() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="text-text">Loading...</div>
+      </div>
+    );
+  }
+
   const miniStats = [
     { value: '248', label: 'Total', color: 'accent' },
     { value: '197', label: 'Active', color: 'success' },

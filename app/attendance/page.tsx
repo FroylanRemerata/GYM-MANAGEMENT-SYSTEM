@@ -1,13 +1,31 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 
 export default function Attendance() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="text-text">Loading...</div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 640);

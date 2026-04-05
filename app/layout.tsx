@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Bebas_Neue, DM_Sans, Space_Mono } from 'next/font/google';
+import { LayoutWrapper } from '@/app/layout-wrapper';
 import '@/styles/globals.css';
 
 const bebasNeue = Bebas_Neue({
@@ -39,7 +40,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${spaceMono.variable}`}>
-      <body className="bg-bg text-text overflow-x-hidden">{children}</body>
+      <body className="bg-bg text-text overflow-x-hidden">
+        <LayoutWrapper>{children}</LayoutWrapper>
+      </body>
     </html>
   );
 }
