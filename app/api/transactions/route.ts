@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getTransactions, getTransactionsByMember, createTransaction, updateTransaction } from '@/lib/database';
+import { getTransactions, getTransactionsByMember, createTransaction, updateTransaction, deleteTransaction } from '@/lib/database';
 
 // GET all transactions or by member
 export async function GET(request: Request) {
@@ -55,6 +55,29 @@ export async function PUT(request: Request) {
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Failed to update transaction' },
+      { status: 400 }
+    );
+  }
+}
+
+// DELETE transaction
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Transaction ID is required' },
+        { status: 400 }
+      );
+    }
+
+    await deleteTransaction(id);
+    return NextResponse.json({ success: true, message: 'Transaction deleted' });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to delete transaction' },
       { status: 400 }
     );
   }

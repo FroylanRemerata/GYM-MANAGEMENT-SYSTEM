@@ -100,6 +100,15 @@ export async function updateTransaction(id: string, updates: Partial<Transaction
   return data as Transaction;
 }
 
+export async function deleteTransaction(id: string) {
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 // ATTENDANCE
 export async function logAttendance(memberId: string) {
   const today = new Date().toISOString().split('T')[0];
@@ -135,6 +144,27 @@ export async function getAttendanceByMember(memberId: string, startDate?: string
 
   if (error) throw error;
   return data as Attendance[];
+}
+
+export async function updateAttendance(id: string, updates: Partial<Attendance>) {
+  const { data, error } = await supabase
+    .from('attendance')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Attendance;
+}
+
+export async function deleteAttendance(id: string) {
+  const { error } = await supabase
+    .from('attendance')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
 }
 
 // DASHBOARD STATS
