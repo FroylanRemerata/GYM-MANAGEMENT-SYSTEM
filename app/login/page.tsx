@@ -6,20 +6,25 @@ import { signInWithEmail } from '@/lib/auth';
 import { useAuth } from '@/lib/auth-context';
 import Button from '@/components/Button';
 
+function isUserAdmin(userMetadata: any): boolean {
+  const role = userMetadata?.role?.toLowerCase();
+  return role === 'admin' || role === 'super_admin';
+}
+
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated as admin
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && isAdmin) {
       router.push('/dashboard');
     }
-  }, [user, loading, router]);
+  }, [user, loading, isAdmin, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +37,14 @@ export default function LoginPage() {
       setError(authError.message || 'Invalid credentials');
       setIsLoading(false);
     } else if (authUser) {
-      // Auth succeeded, redirect will happen via useEffect
-      router.push('/dashboard');
+      // Check if user is admin or super_admin
+      if (!isUserAdmin(authUser.user_metadata)) {
+        setError('Access denied. Only admin and super admin users are allowed.');
+        setIsLoading(false);
+      } else {
+        // Auth succeeded, redirect will happen via useEffect
+        router.push('/dashboard');
+      }
     }
   };
 

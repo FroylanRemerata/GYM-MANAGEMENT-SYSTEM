@@ -7,13 +7,21 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isAuthenticated: false,
+  isAdmin: false,
 });
+
+function isUserAdmin(user: AuthUser | null): boolean {
+  if (!user) return false;
+  const role = user.user_metadata?.role?.toLowerCase();
+  return role === 'admin' || role === 'super_admin';
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -35,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     isAuthenticated: !!user,
+    isAdmin: isUserAdmin(user),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

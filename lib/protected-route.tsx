@@ -6,13 +6,17 @@ import { useAuth } from '@/lib/auth-context';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
+    if (!loading) {
+      if (!user) {
+        router.push('/login');
+      } else if (!isAdmin) {
+        router.push('/login');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, loading, isAdmin, router]);
 
   if (loading) {
     return (
@@ -22,7 +26,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  if (!user || !isAdmin) {
     return null;
   }
 

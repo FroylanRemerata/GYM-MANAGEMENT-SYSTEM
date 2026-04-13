@@ -10,16 +10,18 @@ import Button from '@/components/Button';
 
 export default function Attendance() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAdmin } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
+    if (!authLoading) {
+      if (!user || !isAdmin) {
+        router.push('/login');
+      }
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, isAdmin, router]);
 
-  if (authLoading || !user) {
+  if (authLoading || !user || !isAdmin) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="text-text">Loading...</div>

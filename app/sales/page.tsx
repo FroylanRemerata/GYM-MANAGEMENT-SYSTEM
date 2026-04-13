@@ -12,15 +12,17 @@ import ProgressBar from '@/components/ProgressBar';
 
 export default function Sales() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
+    if (!loading) {
+      if (!user || !isAdmin) {
+        router.push('/login');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, loading, isAdmin, router]);
 
-  if (loading || !user) {
+  if (loading || !user || !isAdmin) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="text-text">Loading...</div>
