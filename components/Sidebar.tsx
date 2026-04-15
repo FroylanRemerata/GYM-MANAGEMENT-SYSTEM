@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 
 const navigationItems = [
   { id: 'dashboard', icon: '⚡', label: 'Dashboard', href: '/' },
@@ -13,6 +14,7 @@ const navigationItems = [
 ];
 
 export default function Sidebar() {
+  const { isSuperAdmin, role } = useAuth();
   const [activeItem, setActiveItem] = useState('dashboard');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -92,6 +94,28 @@ export default function Sidebar() {
               {item.badge && <span className="ml-auto bg-accent2 text-white text-9px font-mono px-1.5 py-0.5 rounded-full flex-shrink-0">{item.badge}</span>}
             </Link>
           ))}
+
+          {/* Admin Section - Super Admin Only */}
+          {isSuperAdmin && (
+            <>
+              <div className="px-3 py-3 text-9px sm:text-xs font-mono text-accent tracking-widest uppercase mt-2">Admin</div>
+              <Link
+                href="/settings"
+                onClick={() => {
+                  setActiveItem('settings');
+                  setIsOpen(false);
+                }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border text-sm sm:text-sm ${
+                  activeItem === 'settings'
+                    ? 'bg-accent/8 text-accent border-accent/15'
+                    : 'text-muted border-transparent hover:bg-surface2 hover:text-text'
+                }`}
+              >
+                <span className="text-base w-5 text-center flex-shrink-0">⚙️</span>
+                <span className="font-medium tracking-tight text-xs sm:text-sm flex-1">Settings</span>
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* User Card Footer */}
@@ -102,7 +126,7 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0 hidden sm:block">
               <div className="text-9px sm:text-xs font-semibold leading-tight">James Reyes</div>
-              <div className="text-8px text-muted">Manager · Admin</div>
+              <div className="text-8px text-muted">{role === 'super_admin' ? 'Super Admin' : 'Admin'}</div>
             </div>
           </div>
         </div>

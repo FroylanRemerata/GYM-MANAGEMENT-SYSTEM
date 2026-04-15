@@ -22,7 +22,7 @@ interface MemberFormData {
 
 export default function Members() {
   const router = useRouter();
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isSuperAdmin } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -294,13 +294,15 @@ export default function Members() {
                                 >
                                   Edit
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handleDelete(member.id)}
-                                >
-                                  Delete
-                                </Button>
+                                {isSuperAdmin && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleDelete(member.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -343,14 +345,16 @@ export default function Members() {
                           >
                             Edit
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => handleDelete(member.id)}
-                          >
-                            Delete
-                          </Button>
+                          {isSuperAdmin && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => handleDelete(member.id)}
+                            >
+                              Delete
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
