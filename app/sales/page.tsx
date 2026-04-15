@@ -120,7 +120,7 @@ export default function Sales() {
                   <div key={idx}>
                     <div className="flex justify-between items-center mb-1 sm:mb-1.5 text-8px sm:text-xs">
                       <span>{method.name}</span>
-                      <span className={method.color === 'accent' ? 'text-accent' : method.color === 'success' ? 'text-success' : method.color === 'accent3' ? 'text-accent3' : 'text-accent2'}>
+                      <span className={method.color === 'accent' ? 'text-accent' : 'text-accent3'}>
                         {method.amount} · {method.percentage}%
                       </span>
                     </div>

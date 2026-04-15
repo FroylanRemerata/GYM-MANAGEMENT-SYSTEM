@@ -115,7 +115,6 @@ export default function Settings() {
                     <div key={sidx} className="flex items-center justify-between pb-4 border-b border-border last:border-b-0 last:pb-0">
                       <div>
                         <div className="text-sm font-display text-text">{setting.label}</div>
-                        <div className="text-9px text-muted mt-0.5">{setting.category}</div>
                       </div>
                       {setting.type === 'toggle' ? (
                         <input

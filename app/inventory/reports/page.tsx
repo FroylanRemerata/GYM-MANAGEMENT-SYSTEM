@@ -73,7 +73,7 @@ export default function InventoryReports() {
   ).map(([name, stats]) => ({ name, ...stats }));
 
   // Expiry status
-  const getDaysUntilExpiry = (expiryDate?: string) => {
+  const getDaysUntilExpiry = (expiryDate: string | null | undefined) => {
     if (!expiryDate) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -120,8 +120,8 @@ export default function InventoryReports() {
     'sports_drink': 'success',
     'juice': 'accent3',
     'energy_drink': 'accent2',
-    'other': 'muted'
-  } as Record<string, string>;
+    'other': 'accent'
+  } as Record<string, 'accent' | 'success' | 'accent2' | 'accent3'>;
 
   return (
     <div className="flex flex-col h-screen bg-bg overflow-hidden">

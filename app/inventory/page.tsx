@@ -201,7 +201,7 @@ export default function Inventory() {
   const totalValue = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
   // Helper function to get days until expiry
-  const getDaysUntilExpiry = (expiryDate?: string) => {
+  const getDaysUntilExpiry = (expiryDate: string | null | undefined) => {
     if (!expiryDate) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -212,7 +212,7 @@ export default function Inventory() {
   };
 
   // Helper function to get expiry status
-  const getExpiryStatus = (expiryDate?: string) => {
+  const getExpiryStatus = (expiryDate: string | null | undefined) => {
     if (!expiryDate) return null;
     const days = getDaysUntilExpiry(expiryDate);
     if (!days) return null;
@@ -461,7 +461,7 @@ export default function Inventory() {
                               </td>
                               <td className="py-3 px-4 border-b border-border/60">
                                 {expiryStatus === 'expired' && (
-                                  <Badge type="accent">Expired</Badge>
+                                  <Badge type="expired">Expired</Badge>
                                 )}
                                 {expiryStatus === 'expiring-soon' && (
                                   <Badge type="expiring">Expiring!</Badge>
@@ -512,7 +512,7 @@ export default function Inventory() {
                           <div className="flex justify-between items-start mb-2">
                             <div className="font-semibold text-sm">{item.name}</div>
                             <div className="flex gap-1">
-                              {expiryStatus === 'expired' && <Badge type="accent">Exp</Badge>}
+                              {expiryStatus === 'expired' && <Badge type="expired">Exp</Badge>}
                               {expiryStatus === 'expiring-soon' && <Badge type="expiring">!</Badge>}
                               {isLowStock && <Badge type="expiring">Low</Badge>}
                               {!isLowStock && !expiryStatus && <Badge type="active">OK</Badge>}
