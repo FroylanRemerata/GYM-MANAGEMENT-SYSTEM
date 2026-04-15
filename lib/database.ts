@@ -1,5 +1,5 @@
 import { supabase, supabaseServer } from './supabase';
-import type { Member, Transaction, Attendance, DashboardStats } from '@/types/database';
+import type { Member, Transaction, Attendance, DashboardStats, InventoryItem, InventoryTransaction } from '@/types/database';
 
 // MEMBERS
 export async function getMembers() {
@@ -211,4 +211,101 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     monthly_revenue: monthlyRevenue,
     pending_payments: pendingPayments || 0,
   };
+}
+
+// INVENTORY
+export async function getInventoryItems() {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+  return data as InventoryItem[];
+}
+
+export async function getInventoryItemById(id: string) {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data as InventoryItem;
+}
+
+export async function createInventoryItem(item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at'>) {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .insert([item])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as InventoryItem;
+}
+
+export async function updateInventoryItem(id: string, updates: Partial<InventoryItem>) {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as InventoryItem;
+}
+
+export async function deleteInventoryItem(id: string) {
+  const { error } = await supabase
+    .from('inventory_items')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+// INVENTORY TRANSACTIONS
+export async function getInventoryTransactions(itemId?: string) {
+  let query = supabase
+    .from('inventory_transactions')
+    .select('*');
+
+  if (itemId) {
+    query = query.eq('inventory_item_id', itemId);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data as InventoryTransaction[];
+}
+
+export async function createInventoryTransaction(transaction: Omit<InventoryTransaction, 'id' | 'created_at'>) {
+  const { data, error } = await supabase
+    .from('inventory_transactions')
+    .insert([transaction])
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Update inventory quantity
+  const transaction_data = data as InventoryTransaction;
+  if (transaction_data.transaction_type === 'restock') {
+    const currentItem = await getInventoryItemById(transaction_data.inventory_item_id);
+    await updateInventoryItem(transaction_data.inventory_item_id, {
+      quantity: currentItem.quantity + transaction_data.quantity,
+      last_restocked: new Date().toISOString().split('T')[0],
+    });
+  } else {
+    const currentItem = await getInventoryItemById(transaction_data.inventory_item_id);
+    await updateInventoryItem(transaction_data.inventory_item_id, {
+      quantity: Math.max(0, currentItem.quantity - transaction_data.quantity),
+    });
+  }
+
+  return transaction_data;
 }

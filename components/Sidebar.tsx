@@ -8,6 +8,7 @@ const navigationItems = [
   { id: 'dashboard', icon: '⚡', label: 'Dashboard', href: '/' },
   { id: 'members', icon: '👥', label: 'Members', href: '/members' },
   { id: 'sales', icon: '💳', label: 'Sales & Payments', href: '/sales' },
+  { id: 'inventory', icon: '🥤', label: 'Drink Inventory', href: '/inventory' },
   { id: 'reminders', icon: '🤖', label: 'AI Reminders', href: '/reminders', badge: 5 },
   { id: 'attendance', icon: '📋', label: 'Attendance', href: '/attendance' },
   { id: 'reports', icon: '📊', label: 'Reports', href: '/reports' },
@@ -53,7 +54,7 @@ export default function Sidebar() {
         <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
           {/* Main Section */}
           <div className="px-3 py-3 text-9px sm:text-xs font-mono text-muted tracking-widest uppercase">Main</div>
-          {navigationItems.slice(0, 3).map((item) => (
+          {navigationItems.slice(0, 4).map((item) => (
             <Link
               key={item.id}
               href={item.href}
@@ -75,7 +76,7 @@ export default function Sidebar() {
 
           {/* Tools Section */}
           <div className="px-3 py-3 text-9px sm:text-xs font-mono text-muted tracking-widest uppercase mt-2">Tools</div>
-          {navigationItems.slice(3).map((item) => (
+          {navigationItems.slice(4).map((item) => (
             <Link
               key={item.id}
               href={item.href}

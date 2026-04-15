@@ -36,10 +36,8 @@ export default function Sales() {
   ];
 
   const paymentMethods = [
-    { name: 'GCash', amount: '₱41,200', percentage: 42, color: 'accent' as const },
-    { name: 'Cash', amount: '₱32,800', percentage: 33, color: 'accent3' as const },
-    { name: 'Maya', amount: '₱15,600', percentage: 16, color: 'success' as const },
-    { name: 'Card', amount: '₱8,850', percentage: 9, color: 'accent2' as const },
+    { name: 'Online', amount: '₱56,800', percentage: 58, color: 'accent' as const },
+    { name: 'Cash', amount: '₱40,650', percentage: 42, color: 'accent3' as const },
   ];
 
   const transactions = [
@@ -48,7 +46,7 @@ export default function Sales() {
       member: 'Derek Cruz',
       type: 'VIP Membership',
       amount: '₱5,000',
-      method: 'GCash',
+      method: 'Online',
       date: 'Dec 28, 2025',
       status: 'paid',
     },
@@ -57,7 +55,7 @@ export default function Sales() {
       member: 'Carlo Reyes',
       type: 'Renewal',
       amount: '₱2,500',
-      method: 'Maya',
+      method: 'Online',
       date: 'Dec 27, 2025',
       status: 'paid',
     },
@@ -75,7 +73,7 @@ export default function Sales() {
       member: 'Ben Marasigan',
       type: 'Premium',
       amount: '₱2,000',
-      method: 'GCash',
+      method: 'Online',
       date: 'Dec 26, 2025',
       status: 'pending',
     },

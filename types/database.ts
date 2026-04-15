@@ -18,8 +18,8 @@ export interface Transaction {
   id: string;
   member_id: string;
   amount: number;
-  payment_method: 'gcash' | 'cash' | 'maya' | 'card';
-  transaction_type: 'membership' | 'renewal' | 'walk_in' | 'merchandise';
+  payment_method: 'online' | 'cash';
+  transaction_type: 'membership' | 'renewal' | 'walk_in' | 'merchandise' | 'drink_sale';
   status: 'paid' | 'pending' | 'failed';
   created_at: string;
   updated_at: string;
@@ -65,4 +65,30 @@ export interface DashboardStats {
   expiring_soon: number;
   monthly_revenue: number;
   pending_payments: number;
+}
+
+// Inventory types
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: 'water' | 'sports_drink' | 'juice' | 'energy_drink' | 'other';
+  quantity: number;
+  unit_price: number;
+  supplier: string;
+  reorder_level: number;
+  expiry_date: string | null;
+  last_restocked: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Inventory transaction types
+export interface InventoryTransaction {
+  id: string;
+  inventory_item_id: string;
+  transaction_type: 'restock' | 'sale' | 'adjustment' | 'damage';
+  quantity: number;
+  notes: string;
+  created_by: string;
+  created_at: string;
 }
