@@ -133,14 +133,16 @@ export async function GET(request: NextRequest) {
     // Get all low stock items for dashboard at a glance
     const { data: items, error: itemsError } = await supabaseServer
       .from('inventory_items')
-      .select('*')
-      .lte('quantity', 'reorder_level', {Ineq: true});
+      .select('*');
 
-    if (itemsError && itemsError.code !== 'PGRST116') { // PGRST116 is expected when no results
+    if (itemsError) {
       throw new Error(`Failed to fetch items: ${itemsError.message}`);
     }
 
-    const lowStockItems = (items as InventoryItem[]) || [];
+    // Filter items on client side where quantity <= reorder_level
+    const lowStockItems = (items as InventoryItem[])?.filter(
+      item => item.quantity <= item.reorder_level
+    ) || [];
 
     return NextResponse.json({
       success: true,
