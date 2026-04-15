@@ -236,14 +236,35 @@ export async function getInventoryItemById(id: string) {
 }
 
 export async function createInventoryItem(item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
-    .from('inventory_items')
-    .insert([item])
-    .select()
-    .single();
+  try {
+    // Get current user for created_by field
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
 
-  if (error) throw error;
-  return data as InventoryItem;
+    const itemWithUser = {
+      ...item,
+      created_by: user.id
+    };
+
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .insert([itemWithUser])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Insert error:', error);
+      throw new Error(`Failed to create inventory item: ${error.message}`);
+    }
+    
+    return data as InventoryItem;
+  } catch (error) {
+    console.error('createInventoryItem error:', error);
+    throw error;
+  }
 }
 
 export async function updateInventoryItem(id: string, updates: Partial<InventoryItem>) {
