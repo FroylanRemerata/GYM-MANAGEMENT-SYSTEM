@@ -200,6 +200,57 @@ export default function Inventory() {
   const lowStockItems = items.filter(item => item.quantity <= item.reorder_level);
   const totalValue = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
+  // Helper function to get days until expiry
+  const getDaysUntilExpiry = (expiryDate?: string) => {
+    if (!expiryDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    const diff = expiry.getTime() - today.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  // Helper function to get expiry status
+  const getExpiryStatus = (expiryDate?: string) => {
+    if (!expiryDate) return null;
+    const days = getDaysUntilExpiry(expiryDate);
+    if (!days) return null;
+    if (days < 0) return 'expired';
+    if (days <= 7) return 'expiring-soon';
+    if (days <= 30) return 'expiring';
+    return 'ok';
+  };
+
+  // Export to CSV
+  const handleExport = () => {
+    const headers = ['Name', 'Category', 'Quantity', 'Unit Price', 'Total Value', 'Supplier', 'Reorder Level', 'Expiry Date', 'Days Until Expiry'];
+    const rows = items.map(item => [
+      item.name,
+      item.category.replace('_', ' '),
+      item.quantity,
+      item.unit_price.toFixed(2),
+      (item.quantity * item.unit_price).toFixed(2),
+      item.supplier || 'N/A',
+      item.reorder_level,
+      item.expiry_date || 'N/A',
+      item.expiry_date ? getDaysUntilExpiry(item.expiry_date) : 'N/A'
+    ]);
+
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    csvContent += headers.join(',') + '\n';
+    rows.forEach(row => {
+      csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+    });
+
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', `inventory-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-bg overflow-hidden">
       <Topbar title="INVENTORY MANAGEMENT" />
@@ -212,17 +263,32 @@ export default function Inventory() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
               <h2 className="font-bebas text-2xl sm:text-3xl md:text-4xl tracking-widest text-text">Drink Inventory</h2>
-              <Button 
-                size="sm"
-                className="ml-auto"
-                onClick={() => {
-                  setEditingId(null);
-                  resetForm();
-                  setShowModal(true);
-                }}
-              >
-                + Add Item
-              </Button>
+              <div className="flex gap-2 ml-auto">
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push('/inventory/reports')}
+                >
+                  📊 Reports
+                </Button>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleExport}
+                >
+                  ↓ Export CSV
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => {
+                    setEditingId(null);
+                    resetForm();
+                    setShowModal(true);
+                  }}
+                >
+                  + Add Item
+                </Button>
+              </div>
             </div>
 
             {/* Error Message */}
@@ -326,6 +392,7 @@ export default function Inventory() {
                           <th className="text-right font-mono text-9px text-muted uppercase tracking-widest pb-3 px-4 border-b border-border sticky top-0 bg-surface">Price</th>
                           <th className="text-right font-mono text-9px text-muted uppercase tracking-widest pb-3 px-4 border-b border-border sticky top-0 bg-surface">Value</th>
                           <th className="text-left font-mono text-9px text-muted uppercase tracking-widest pb-3 px-4 border-b border-border sticky top-0 bg-surface">Supplier</th>
+                          <th className="text-left font-mono text-9px text-muted uppercase tracking-widest pb-3 px-4 border-b border-border sticky top-0 bg-surface">Expiry</th>
                           <th className="text-left font-mono text-9px text-muted uppercase tracking-widest pb-3 px-4 border-b border-border sticky top-0 bg-surface">Status</th>
                           <th className="text-left font-mono text-9px text-muted uppercase tracking-widest pb-3 px-4 border-b border-border sticky top-0 bg-surface">Actions</th>
                         </tr>
@@ -333,18 +400,50 @@ export default function Inventory() {
                       <tbody>
                         {items.map((item) => {
                           const isLowStock = item.quantity <= item.reorder_level;
+                          const expiryStatus = getExpiryStatus(item.expiry_date);
+                          const daysUntilExpiry = getDaysUntilExpiry(item.expiry_date);
                           return (
-                            <tr key={item.id} className={`hover:bg-white/1.5 transition-colors ${isLowStock ? 'bg-accent2/5' : ''}`}>
+                            <tr key={item.id} className={`hover:bg-white/1.5 transition-colors ${isLowStock ? 'bg-accent2/5' : ''} ${expiryStatus === 'expired' ? 'bg-accent/10' : expiryStatus === 'expiring-soon' ? 'bg-accent2/10' : ''}`}>
                               <td className="py-3 px-4 border-b border-border/60 font-semibold">{item.name}</td>
                               <td className="py-3 px-4 border-b border-border/60 text-sm capitalize">{item.category.replace('_', ' ')}</td>
                               <td className="py-3 px-4 border-b border-border/60 text-right font-mono">{item.quantity}</td>
                               <td className="py-3 px-4 border-b border-border/60 text-right font-mono">₱{item.unit_price.toFixed(2)}</td>
                               <td className="py-3 px-4 border-b border-border/60 text-right font-semibold">₱{(item.quantity * item.unit_price).toFixed(2)}</td>
                               <td className="py-3 px-4 border-b border-border/60 text-sm">{item.supplier}</td>
+                              <td className="py-3 px-4 border-b border-border/60 text-sm">
+                                {item.expiry_date ? (
+                                  <div>
+                                    <div className="font-mono text-10px">{item.expiry_date}</div>
+                                    <div className={`text-9px font-semibold ${
+                                      expiryStatus === 'expired' ? 'text-accent' :
+                                      expiryStatus === 'expiring-soon' ? 'text-accent2' :
+                                      expiryStatus === 'expiring' ? 'text-accent3' : 'text-success'
+                                    }`}>
+                                      {daysUntilExpiry === 0 ? 'Today' : 
+                                       daysUntilExpiry && daysUntilExpiry < 0 ? `${Math.abs(daysUntilExpiry)}d ago` :
+                                       `${daysUntilExpiry}d left`}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted">No date</span>
+                                )}
+                              </td>
                               <td className="py-3 px-4 border-b border-border/60">
-                                <Badge type={isLowStock ? 'expiring' : 'active'}>
-                                  {isLowStock ? 'Low Stock' : 'OK'}
-                                </Badge>
+                                {expiryStatus === 'expired' && (
+                                  <Badge type="accent">Expired</Badge>
+                                )}
+                                {expiryStatus === 'expiring-soon' && (
+                                  <Badge type="expiring">Expiring!</Badge>
+                                )}
+                                {expiryStatus === 'expiring' && (
+                                  <Badge type="pending">Soon</Badge>
+                                )}
+                                {isLowStock && expiryStatus !== 'expired' && expiryStatus !== 'expiring-soon' && (
+                                  <Badge type="expiring">Low Stock</Badge>
+                                )}
+                                {!isLowStock && !expiryStatus && (
+                                  <Badge type="active">OK</Badge>
+                                )}
                               </td>
                               <td className="py-3 px-4 border-b border-border/60">
                                 <div className="flex gap-2">
@@ -375,13 +474,18 @@ export default function Inventory() {
                   <div className="md:hidden space-y-3">
                     {items.map((item) => {
                       const isLowStock = item.quantity <= item.reorder_level;
+                      const expiryStatus = getExpiryStatus(item.expiry_date);
+                      const daysUntilExpiry = getDaysUntilExpiry(item.expiry_date);
                       return (
-                        <div key={item.id} className={`p-3 border border-border rounded-lg hover:bg-white/1.5 transition-colors ${isLowStock ? 'bg-accent2/5' : ''}`}>
+                        <div key={item.id} className={`p-3 border border-border rounded-lg hover:bg-white/1.5 transition-colors ${isLowStock ? 'bg-accent2/5' : ''} ${expiryStatus === 'expired' ? 'bg-accent/10' : expiryStatus === 'expiring-soon' ? 'bg-accent2/10' : ''}`}>
                           <div className="flex justify-between items-start mb-2">
                             <div className="font-semibold text-sm">{item.name}</div>
-                            <Badge type={isLowStock ? 'expiring' : 'active'}>
-                              {isLowStock ? 'Low' : 'OK'}
-                            </Badge>
+                            <div className="flex gap-1">
+                              {expiryStatus === 'expired' && <Badge type="accent">Exp</Badge>}
+                              {expiryStatus === 'expiring-soon' && <Badge type="expiring">!</Badge>}
+                              {isLowStock && <Badge type="expiring">Low</Badge>}
+                              {!isLowStock && !expiryStatus && <Badge type="active">OK</Badge>}
+                            </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 mb-3 text-9px text-muted">
                             <div>Qty: {item.quantity}</div>
@@ -389,6 +493,20 @@ export default function Inventory() {
                             <div>Value: ₱{(item.quantity * item.unit_price).toFixed(2)}</div>
                             <div>Category: {item.category}</div>
                           </div>
+                          {item.expiry_date && (
+                            <div className="mb-3 p-2 bg-surface/50 rounded text-9px">
+                              <div className="font-mono text-muted">Expires: {item.expiry_date}</div>
+                              <div className={`font-semibold ${
+                                expiryStatus === 'expired' ? 'text-accent' :
+                                expiryStatus === 'expiring-soon' ? 'text-accent2' :
+                                'text-success'
+                              }`}>
+                                {daysUntilExpiry === 0 ? 'TODAY' : 
+                                 daysUntilExpiry && daysUntilExpiry < 0 ? `${Math.abs(daysUntilExpiry)}d ago` :
+                                 `${daysUntilExpiry} days left`}
+                              </div>
+                            </div>
+                          )}
                           <div className="flex gap-2">
                             <Button 
                               variant="ghost" 
