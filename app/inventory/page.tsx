@@ -298,6 +298,37 @@ export default function Inventory() {
               </div>
             )}
 
+            {/* Low Stock Alert Banner */}
+            {!isLoading && lowStockItems.length > 0 && (
+              <div className="p-3 sm:p-4 bg-accent2/10 border-l-4 border-accent2 rounded-lg mb-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-accent2 mb-1">⚠️ Low Stock Alert</h3>
+                    <p className="text-sm text-text">{lowStockItems.length} item{lowStockItems.length !== 1 ? 's' : ''} need reordering:</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {lowStockItems.slice(0, 4).map(item => (
+                        <span key={item.id} className="inline-flex px-2 py-1 bg-accent2/20 rounded text-9px font-mono">
+                          {item.name} ({item.quantity}/{item.reorder_level})
+                        </span>
+                      ))}
+                      {lowStockItems.length > 4 && (
+                        <span className="inline-flex px-2 py-1 bg-accent2/20 rounded text-9px font-semibold">
+                          +{lowStockItems.length - 4} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button 
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => router.push('/inventory/reports')}
+                  >
+                    View Details →
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-6">
               <Card title="Total Items">
