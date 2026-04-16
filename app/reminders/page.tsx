@@ -256,8 +256,10 @@ export default function Reminders() {
                 <Card title="Send Promotion" subtitle="Create and send special offers to members">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-mono text-muted mb-1 uppercase">Promotion Title</label>
+                      <label htmlFor="promotionTitle" className="block text-sm font-mono text-muted mb-1 uppercase">Promotion Title</label>
                       <input
+                        id="promotionTitle"
+                        name="promotionTitle"
                         type="text"
                         value={promotionData.title}
                         onChange={(e) => setPromotionData({ ...promotionData, title: e.target.value })}
@@ -267,8 +269,10 @@ export default function Reminders() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-mono text-muted mb-1 uppercase">Promotion Details</label>
+                      <label htmlFor="promotionDetails" className="block text-sm font-mono text-muted mb-1 uppercase">Promotion Details</label>
                       <textarea
+                        id="promotionDetails"
+                        name="promotionDetails"
                         value={promotionData.details}
                         onChange={(e) => setPromotionData({ ...promotionData, details: e.target.value })}
                         placeholder="e.g., Get 20% off on annual memberships this month only!"
@@ -278,8 +282,10 @@ export default function Reminders() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-mono text-muted mb-1 uppercase">Expires On</label>
+                      <label htmlFor="expiresOn" className="block text-sm font-mono text-muted mb-1 uppercase">Expires On</label>
                       <input
+                        id="expiresOn"
+                        name="expiresOn"
                         type="date"
                         value={promotionData.expiresOn}
                         onChange={(e) => setPromotionData({ ...promotionData, expiresOn: e.target.value })}

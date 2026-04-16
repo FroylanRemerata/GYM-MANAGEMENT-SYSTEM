@@ -43,6 +43,8 @@ export default function Topbar({ title }: TopbarProps) {
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 sm:ml-auto">
         <input
+          id="search"
+          name="search"
           type="text"
           placeholder="Search…"
           value={search}
