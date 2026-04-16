@@ -20,15 +20,26 @@ const reportItems = [
 ];
 
 export default function Sidebar() {
-  const { isSuperAdmin, role } = useAuth();
+  const { isSuperAdmin, role, authToken } = useAuth();
   const [activeItem, setActiveItem] = useState('dashboard');
   const [isOpen, setIsOpen] = useState(false);
   const [reminderCount, setReminderCount] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchReminderCount = async () => {
+      if (!authToken) return;
+      
       try {
-        const response = await fetch('/api/reminders/count');
+        const response = await fetch('/api/reminders/count', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
+        }
+        
         const data = await response.json();
         setReminderCount(data.totalPending || 0);
       } catch (error) {
@@ -37,11 +48,13 @@ export default function Sidebar() {
       }
     };
 
-    fetchReminderCount();
-    // Refresh count every 5 minutes
-    const interval = setInterval(fetchReminderCount, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (authToken) {
+      fetchReminderCount();
+      // Refresh count every 5 minutes
+      const interval = setInterval(fetchReminderCount, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [authToken]);
 
   const displayItems = navigationItems.map(item =>
     item.id === 'reminders' ? { ...item, badge: reminderCount } : item

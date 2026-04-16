@@ -23,9 +23,10 @@ interface DashboardData {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, authToken } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading) {
@@ -33,19 +34,32 @@ export default function Dashboard() {
         router.push('/login');
       } else {
         // Fetch dashboard data
-        fetchDashboardData();
+        if (authToken) {
+          fetchDashboardData(authToken);
+        }
       }
     }
-  }, [user, loading, isAdmin, router]);
+  }, [user, loading, isAdmin, authToken, router]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (token: string) => {
     try {
       setDataLoading(true);
-      const response = await fetch('/api/dashboard/live-stats');
+      setError(null);
+      const response = await fetch('/api/dashboard/live-stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      
       const result = await response.json();
       setData(result);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
+      setError('Failed to load dashboard data');
     } finally {
       setDataLoading(false);
     }
