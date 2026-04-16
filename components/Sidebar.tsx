@@ -11,7 +11,12 @@ const navigationItems = [
   { id: 'inventory', icon: '🥤', label: 'Drink Inventory', href: '/inventory' },
   { id: 'reminders', icon: '🤖', label: 'AI Reminders', href: '/reminders', badge: 5 },
   { id: 'attendance', icon: '📋', label: 'Attendance', href: '/attendance' },
-  { id: 'reports', icon: '📊', label: 'Reports', href: '/reports' },
+];
+
+const reportItems = [
+  { id: 'financial', icon: '💰', label: 'Financial Reports', href: '/reports/financial' },
+  { id: 'renewals', icon: '🔄', label: 'Renewal Tracking', href: '/reports/renewals' },
+  { id: 'inventory-reports', icon: '📦', label: 'Inventory Reports', href: '/inventory/reports' },
 ];
 
 export default function Sidebar() {
@@ -54,7 +59,7 @@ export default function Sidebar() {
         <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
           {/* Main Section */}
           <div className="px-3 py-3 text-9px sm:text-xs font-mono text-muted tracking-widest uppercase">Main</div>
-          {navigationItems.slice(0, 4).map((item) => (
+          {navigationItems.map((item) => (
             <Link
               key={item.id}
               href={item.href}
@@ -74,9 +79,9 @@ export default function Sidebar() {
             </Link>
           ))}
 
-          {/* Tools Section */}
-          <div className="px-3 py-3 text-9px sm:text-xs font-mono text-muted tracking-widest uppercase mt-2">Tools</div>
-          {navigationItems.slice(4).map((item) => (
+          {/* Reports Section */}
+          <div className="px-3 py-3 text-9px sm:text-xs font-mono text-muted tracking-widest uppercase mt-2">Reports</div>
+          {reportItems.map((item) => (
             <Link
               key={item.id}
               href={item.href}
@@ -92,7 +97,6 @@ export default function Sidebar() {
             >
               <span className="text-base w-5 text-center flex-shrink-0">{item.icon}</span>
               <span className="font-medium tracking-tight text-xs sm:text-sm flex-1">{item.label}</span>
-              {item.badge && <span className="ml-auto bg-accent2 text-white text-9px font-mono px-1.5 py-0.5 rounded-full flex-shrink-0">{item.badge}</span>}
             </Link>
           ))}
 

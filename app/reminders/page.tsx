@@ -1,26 +1,141 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import Card from '@/components/Card';
+import Button from '@/components/Button';
 import Badge from '@/components/Badge';
 
 export default function Reminders() {
   const router = useRouter();
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isSuperAdmin, authToken } = useAuth();
+  
+  const [activeTab, setActiveTab] = useState<'renewal' | 'inactive' | 'low-stock' | 'promotion'>('renewal');
+  const [isLoading, setIsLoading] = useState(false);
+  const [memberCount, setMemberCount] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [dryRun, setDryRun] = useState(true);
+
+  // Promotion form state
+  const [promotionData, setPromotionData] = useState({
+    title: '',
+    details: '',
+    expiresOn: '',
+    allMembers: true,
+  });
 
   useEffect(() => {
     if (!loading) {
-      if (!user || !isAdmin) {
+      if (!user || !isSuperAdmin) {
         router.push('/login');
       }
     }
-  }, [user, loading, isAdmin, router]);
+  }, [user, loading, isSuperAdmin, router]);
 
-  if (loading || !user || !isAdmin) {
+  const fetchMemberCount = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reminders/${activeTab}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      const data = await response.json();
+      setMemberCount(data.count || 0);
+    } catch (error) {
+      console.error('Error fetching member count:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (authToken && activeTab) {
+      fetchMemberCount();
+    }
+  }, [activeTab, authToken]);
+
+  const handleSendReminders = async () => {
+    setIsLoading(true);
+    try {
+      const endpoint = activeTab === 'renewal' ? 'renewal' : activeTab === 'inactive' ? 'inactive' : 'low-stock';
+      
+      let body: any = { dryRun };
+      
+      if (activeTab === 'renewal') {
+        body.daysUntilExpiry = 7;
+      } else if (activeTab === 'inactive') {
+        body.inactiveDays = 30;
+      } else if (activeTab === 'low-stock') {
+        body.staffEmails = [user?.email || ''];
+        body.threshold = 50;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reminders/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✓ ${data.message}\nSent: ${data.sent}, Failed: ${data.failed}, Total: ${data.total}`);
+      } else {
+        alert(`✗ Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending reminders:', error);
+      alert('Failed to send reminders');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendPromotion = async () => {
+    if (!promotionData.title || !promotionData.details || !promotionData.expiresOn) {
+      alert('Please fill in all promotion details');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reminders/promotion`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          promotionTitle: promotionData.title,
+          promotionDetails: promotionData.details,
+          expiresOn: promotionData.expiresOn,
+          allMembers: promotionData.allMembers,
+          dryRun,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✓ ${data.message}\nSent: ${data.sent}, Failed: ${data.failed}`);
+        setPromotionData({ title: '', details: '', expiresOn: '', allMembers: true });
+        setShowModal(false);
+      } else {
+        alert(`✗ Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending promotion:', error);
+      alert('Failed to send promotion');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (loading || !user || !isSuperAdmin) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="text-text">Loading...</div>
@@ -28,81 +143,191 @@ export default function Reminders() {
     );
   }
 
-  const reminders = [
-    {
-      type: 'warn',
-      icon: '⚠️',
-      name: 'Ana Lim',
-      desc: 'Premium plan expires in 2 days',
-    },
-    {
-      type: 'danger',
-      icon: '🔴',
-      name: 'Ben Marasigan',
-      desc: 'Payment pending for 5 days',
-    },
-    {
-      type: 'info',
-      icon: 'ℹ️',
-      name: 'Maria Santos',
-      desc: 'Low attendance this month (28%)',
-    },
-  ];
-
   return (
     <div className="flex flex-col h-screen bg-bg overflow-hidden">
-      <Topbar title="AI REMINDERS" />
+      <Topbar title="REMINDERS & NOTIFICATIONS" />
       
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 
         <main className="flex-1 overflow-y-auto bg-bg w-full">
-
-        <div className="p-3 sm:p-4 md:p-8">
-          <h2 className="font-bebas text-2xl sm:text-3xl md:text-4xl tracking-widest text-text mb-4 sm:mb-6">AI-Powered Reminders</h2>
-
-          {/* AI Banner */}
-          <Card className="bg-gradient-to-br from-accent/6 to-accent3/4 border-accent/15 mb-4 sm:mb-6">
-            <div className="flex items-start gap-2 sm:gap-4">
-              <div className="text-2xl sm:text-3xl md:text-4xl flex-shrink-0">🤖</div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm sm:text-base text-text mb-1">Intelligent Member Alerts</div>
-                <div className="text-8px sm:text-xs text-muted">
-                  AI automatically monitors member activity and generates reminders for expirations, payment issues, and engagement patterns.
-                </div>
-              </div>
+          <div className="p-3 sm:p-4 md:p-8">
+            {/* Header */}
+            <div className="mb-6">
+              <h2 className="font-bebas text-2xl sm:text-3xl md:text-4xl tracking-widest text-text mb-4">
+                Reminders & Notifications
+              </h2>
+              <p className="text-muted text-sm">Manage member renewal reminders, inactive alerts, low-stock notifications, and promotions</p>
             </div>
-          </Card>
 
-          {/* Reminders List */}
-          <Card title="Active Reminders" action={<Badge type="active">5 Active</Badge>}>
-            <div className="space-y-2 sm:space-y-3">
-              {reminders.map((reminder, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border ${
-                    reminder.type === 'warn'
-                      ? 'bg-accent/5 border-accent/20'
-                      : reminder.type === 'danger'
-                        ? 'bg-accent2/5 border-accent2/20'
-                        : 'bg-accent3/5 border-accent3/20'
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {(['renewal', 'inactive', 'low-stock', 'promotion'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded font-mono text-sm transition-all ${
+                    activeTab === tab
+                      ? 'bg-accent text-black'
+                      : 'bg-surface2 border border-border text-text hover:border-accent'
                   }`}
                 >
-                  <div className="text-lg sm:text-xl md:text-2xl flex-shrink-0">{reminder.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm">{reminder.name}</div>
-                    <div className="text-8px sm:text-xs text-muted">{reminder.desc}</div>
-                  </div>
-                  <button className="px-2 sm:px-3 py-1 sm:py-1.5 text-8px sm:text-xs font-semibold bg-accent text-black rounded-lg hover:bg-yellow-400 transition-all flex-shrink-0 whitespace-nowrap">
-                    Action
-                  </button>
-                </div>
+                  {tab === 'renewal' && '📅 Renewal'}
+                  {tab === 'inactive' && '😴 Inactive'}
+                  {tab === 'low-stock' && '📦 Low Stock'}
+                  {tab === 'promotion' && '🎉 Promotion'}
+                </button>
               ))}
             </div>
-          </Card>
-        </div>
+
+            {/* Dry Run Toggle */}
+            <Card className="mb-6">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="dryRun"
+                  checked={dryRun}
+                  onChange={(e) => setDryRun(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer"
+                />
+                <label htmlFor="dryRun" className="cursor-pointer text-sm">
+                  <strong>Dry Run Mode</strong> - Preview without sending actual emails
+                </label>
+              </div>
+            </Card>
+
+            {/* Content by Tab */}
+            {activeTab === 'renewal' && (
+              <Card title="Renewal Reminders" subtitle="Send membership renewal notifications">
+                <div className="space-y-4">
+                  <div className="text-sm text-muted">
+                    <p className="mb-2">This will send renewal reminder emails to members whose memberships expire within the next 7 days.</p>
+                    <p className="font-mono text-8px text-muted uppercase">Members to notify: <strong className="text-accent">{memberCount}</strong></p>
+                  </div>
+                  <Button
+                    onClick={handleSendReminders}
+                    disabled={isLoading || memberCount === 0}
+                    className="w-full"
+                  >
+                    {isLoading ? 'Sending...' : `Send Renewal Reminders (${memberCount} members)`}
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {activeTab === 'inactive' && (
+              <Card title="Inactive Member Alerts" subtitle="Re-engage members who haven't visited recently">
+                <div className="space-y-4">
+                  <div className="text-sm text-muted">
+                    <p className="mb-2">This will send engagement emails to members who haven't attended in the last 30 days.</p>
+                    <p className="font-mono text-8px text-muted uppercase">Members to notify: <strong className="text-accent">{memberCount}</strong></p>
+                  </div>
+                  <Button
+                    onClick={handleSendReminders}
+                    disabled={isLoading || memberCount === 0}
+                    className="w-full"
+                  >
+                    {isLoading ? 'Sending...' : `Send Inactive Alerts (${memberCount} members)`}
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {activeTab === 'low-stock' && (
+              <Card title="Low Stock Alerts" subtitle="Notify staff about inventory running low">
+                <div className="space-y-4">
+                  <div className="text-sm text-muted">
+                    <p className="mb-2">This will send low-stock notifications to staff for items below the reorder level.</p>
+                    <p className="font-mono text-8px text-muted uppercase">Items to report: <strong className="text-accent">{memberCount}</strong></p>
+                  </div>
+                  <Button
+                    onClick={handleSendReminders}
+                    disabled={isLoading || memberCount === 0}
+                    className="w-full"
+                  >
+                    {isLoading ? 'Sending...' : `Send Low-Stock Alerts (${memberCount} items)`}
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {activeTab === 'promotion' && (
+              <div className="space-y-4">
+                <Card title="Send Promotion" subtitle="Create and send special offers to members">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-mono text-muted mb-1 uppercase">Promotion Title</label>
+                      <input
+                        type="text"
+                        value={promotionData.title}
+                        onChange={(e) => setPromotionData({ ...promotionData, title: e.target.value })}
+                        placeholder="e.g., Spring Membership Special"
+                        className="w-full px-3 py-2 border border-border rounded bg-surface text-text text-sm focus:outline-none focus:border-accent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-mono text-muted mb-1 uppercase">Promotion Details</label>
+                      <textarea
+                        value={promotionData.details}
+                        onChange={(e) => setPromotionData({ ...promotionData, details: e.target.value })}
+                        placeholder="e.g., Get 20% off on annual memberships this month only!"
+                        rows={4}
+                        className="w-full px-3 py-2 border border-border rounded bg-surface text-text text-sm focus:outline-none focus:border-accent resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-mono text-muted mb-1 uppercase">Expires On</label>
+                      <input
+                        type="date"
+                        value={promotionData.expiresOn}
+                        onChange={(e) => setPromotionData({ ...promotionData, expiresOn: e.target.value })}
+                        className="w-full px-3 py-2 border border-border rounded bg-surface text-text text-sm focus:outline-none focus:border-accent"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="allMembers"
+                        checked={promotionData.allMembers}
+                        onChange={(e) => setPromotionData({ ...promotionData, allMembers: e.target.checked })}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <label htmlFor="allMembers" className="cursor-pointer text-sm">
+                        Send to all active members
+                      </label>
+                    </div>
+
+                    <Button
+                      onClick={handleSendPromotion}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? 'Sending...' : 'Send Promotion'}
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {/* Info Box */}
+            <Card className="mt-6 bg-accent/10 border-accent/30">
+              <div className="text-sm">
+                <p className="font-semibold text-accent mb-2">💡 Tips:</p>
+                <ul className="space-y-1 text-muted text-8px">
+                  <li>• Use Dry Run mode to preview before sending actual emails</li>
+                  <li>• Ensure valid email configuration in .env.local (RESEND_API_KEY)</li>
+                  <li>• All reminders are logged for audit purposes</li>
+                  <li>• Staff alerts are sent to the admin's email address</li>
+                </ul>
+              </div>
+            </Card>
+          </div>
         </main>
       </div>
     </div>
   );
 }
+

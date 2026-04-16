@@ -330,3 +330,112 @@ export async function createInventoryTransaction(transaction: Omit<InventoryTran
 
   return transaction_data;
 }
+
+// REMINDERS & NOTIFICATIONS
+export async function getMembersNeedingRenewalReminders(daysUntilExpiry: number = 7) {
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + daysUntilExpiry);
+  
+  const today = new Date().toISOString().split('T')[0];
+  const expiryThreshold = futureDate.toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('members')
+    .select('id, name, email, renewal_date')
+    .gte('renewal_date', today)
+    .lte('renewal_date', expiryThreshold)
+    .order('renewal_date', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getInactiveMembers(inactiveDays: number = 30) {
+  const inactiveThreshold = new Date();
+  inactiveThreshold.setDate(inactiveThreshold.getDate() - inactiveDays);
+  const thresholdDate = inactiveThreshold.toISOString().split('T')[0];
+
+  try {
+    // Get all members
+    const { data: members, error: membersError } = await supabase
+      .from('members')
+      .select('id, name, email');
+
+    if (membersError) throw membersError;
+
+    // Get attendance records
+    const { data: attendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('member_id, attended_at')
+      .order('attended_at', { ascending: false });
+
+    if (attendanceError) throw attendanceError;
+
+    // Process client-side to find inactive members
+    const lastAttendance: Record<string, string> = {};
+    attendance.forEach((record: any) => {
+      if (!lastAttendance[record.member_id]) {
+        lastAttendance[record.member_id] = record.attended_at;
+      }
+    });
+
+    const inactiveMembers = members.filter((member: any) => {
+      const lastDate = lastAttendance[member.id];
+      if (!lastDate) return true; // Never attended
+      return new Date(lastDate) <= new Date(thresholdDate);
+    });
+
+    return inactiveMembers;
+  } catch (error) {
+    console.error('Error getting inactive members:', error);
+    return [];
+  }
+}
+
+export async function getLowStockItems(threshold: number = 50) {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('id, name, quantity, reorder_level, supplier')
+    .lte('quantity', threshold)
+    .order('quantity', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getExpiredOrExpiringItems(daysUntilExpiry: number = 7) {
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + daysUntilExpiry);
+  const expiryThreshold = futureDate.toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('id, name, quantity, expiry_date')
+    .lte('expiry_date', expiryThreshold)
+    .gte('expiry_date', today)
+    .order('expiry_date', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function recordReminderSent(
+  memberId: string,
+  reminderType: 'renewal' | 'inactive' | 'promotion',
+  sentAt: string = new Date().toISOString()
+) {
+  // Create or update a reminders_log table entry
+  const { error } = await supabase
+    .from('reminders_log')
+    .insert([
+      {
+        member_id: memberId,
+        reminder_type: reminderType,
+        sent_at: sentAt,
+      },
+    ]);
+
+  if (error) console.error('Error logging reminder:', error);
+  return !error;
+}

@@ -12,6 +12,7 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   role?: string;
   permissions: RolePermissions;
+  authToken?: string;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   isSuperAdmin: false,
   role: undefined,
   permissions: getPermissionsByRole(undefined),
+  authToken: undefined,
 });
 
 function isUserAdmin(user: AuthUser | null): boolean {
@@ -44,11 +46,22 @@ function isSuperAdminUser(user: AuthUser | null): boolean {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authToken, setAuthToken] = useState<string>();
 
   useEffect(() => {
     // Listen for auth changes
-    const subscription = onAuthStateChange((currentUser) => {
+    const subscription = onAuthStateChange(async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        // Get the current session to retrieve the access token
+        const { supabase } = await import('@/lib/supabase');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          setAuthToken(session.access_token);
+        }
+      } else {
+        setAuthToken(undefined);
+      }
       setLoading(false);
     });
 
@@ -68,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isSuperAdmin: isSuperAdminUser(user),
     role,
     permissions,
+    authToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
