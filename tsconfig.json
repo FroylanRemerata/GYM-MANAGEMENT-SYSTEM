@@ -11,12 +11,6 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
     "strict": true,
     "noImplicitAny": true,
     "forceConsistentCasingInFileNames": true,
@@ -32,7 +26,12 @@
     ],
     "allowJs": true,
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
   },
   "include": [
     "next-env.d.ts",
