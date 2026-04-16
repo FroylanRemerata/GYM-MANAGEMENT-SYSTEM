@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { AuthUser, onAuthStateChange } from '@/lib/auth';
 import { getPermissionsByRole, RolePermissions } from '@/lib/permissions';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -54,10 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentUser);
       if (currentUser) {
         // Get the current session to retrieve the access token
-        const { supabase } = await import('@/lib/supabase');
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          setAuthToken(session.access_token);
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            setAuthToken(session.access_token);
+          }
+        } catch (error) {
+          console.error('Failed to get session:', error);
         }
       } else {
         setAuthToken(undefined);
