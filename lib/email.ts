@@ -1,6 +1,16 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resend) {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('Missing API key. Pass RESEND_API_KEY to environment variables.');
+    }
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 export async function sendRenewalReminder(
   email: string,
@@ -9,7 +19,8 @@ export async function sendRenewalReminder(
   daysUntilExpiry: number
 ) {
   try {
-    const result = await resend.emails.send({
+    const resendClient = getResendClient();
+    const result = await resendClient.emails.send({
       from: 'Astral Gym <noreply@astralGym.local>',
       to: email,
       subject: `Your Membership is Expiring Soon - Action Required`,
@@ -52,7 +63,8 @@ export async function sendInactiveMemberAlert(
   lastAttendance: string
 ) {
   try {
-    const result = await resend.emails.send({
+    const resendClient = getResendClient();
+    const result = await resendClient.emails.send({
       from: 'Astral Gym <noreply@astralGym.local>',
       to: email,
       subject: `We Miss You! Come Back to Astral Gym`,
@@ -95,7 +107,8 @@ export async function sendLowStockAlert(
   supplier?: string
 ) {
   try {
-    const result = await resend.emails.send({
+    const resendClient = getResendClient();
+    const result = await resendClient.emails.send({
       from: 'Astral Gym <noreply@astralGym.local>',
       to: staffEmail,
       subject: `⚠️ Low Stock Alert: ${itemName}`,
@@ -147,7 +160,8 @@ export async function sendPromotionReminder(
   expiresOn: string
 ) {
   try {
-    const result = await resend.emails.send({
+    const resendClient = getResendClient();
+    const result = await resendClient.emails.send({
       from: 'Astral Gym <noreply@astralGym.local>',
       to: email,
       subject: `🎉 Special Promotion: ${promotionTitle}`,
