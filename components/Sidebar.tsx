@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 
@@ -9,7 +9,7 @@ const navigationItems = [
   { id: 'members', icon: '👥', label: 'Members', href: '/members' },
   { id: 'sales', icon: '💳', label: 'Sales & Payments', href: '/sales' },
   { id: 'inventory', icon: '🥤', label: 'Drink Inventory', href: '/inventory' },
-  { id: 'reminders', icon: '🤖', label: 'AI Reminders', href: '/reminders', badge: 5 },
+  { id: 'reminders', icon: '🤖', label: 'AI Reminders', href: '/reminders', badge: null },
   { id: 'attendance', icon: '📋', label: 'Attendance', href: '/attendance' },
 ];
 
@@ -23,6 +23,29 @@ export default function Sidebar() {
   const { isSuperAdmin, role } = useAuth();
   const [activeItem, setActiveItem] = useState('dashboard');
   const [isOpen, setIsOpen] = useState(false);
+  const [reminderCount, setReminderCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchReminderCount = async () => {
+      try {
+        const response = await fetch('/api/reminders/count');
+        const data = await response.json();
+        setReminderCount(data.totalPending || 0);
+      } catch (error) {
+        console.error('Failed to fetch reminder count:', error);
+        setReminderCount(0);
+      }
+    };
+
+    fetchReminderCount();
+    // Refresh count every 5 minutes
+    const interval = setInterval(fetchReminderCount, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const displayItems = navigationItems.map(item =>
+    item.id === 'reminders' ? { ...item, badge: reminderCount } : item
+  );
 
   return (
     <>
@@ -59,7 +82,7 @@ export default function Sidebar() {
         <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
           {/* Main Section */}
           <div className="px-3 py-3 text-9px sm:text-xs font-mono text-muted tracking-widest uppercase">Main</div>
-          {navigationItems.map((item) => (
+          {displayItems.map((item) => (
             <Link
               key={item.id}
               href={item.href}

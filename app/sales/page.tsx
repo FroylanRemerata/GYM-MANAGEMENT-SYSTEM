@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
@@ -10,17 +10,43 @@ import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import ProgressBar from '@/components/ProgressBar';
 
+interface SalesData {
+  totalRevenue: number;
+  transactionCount: number;
+  typeBreakdown: Record<string, number>;
+  methodBreakdown: Record<string, number>;
+  topTransactions: any[];
+  dailyBreakdown: Record<string, number>;
+}
+
 export default function Sales() {
   const router = useRouter();
   const { user, loading, isAdmin } = useAuth();
+  const [data, setData] = useState<SalesData | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     if (!loading) {
       if (!user || !isAdmin) {
         router.push('/login');
+      } else {
+        fetchSalesData();
       }
     }
   }, [user, loading, isAdmin, router]);
+
+  const fetchSalesData = async () => {
+    try {
+      setDataLoading(true);
+      const response = await fetch('/api/sales/summary');
+      const result = await response.json();
+      setData(result);
+    } catch (error) {
+      console.error('Failed to fetch sales data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   if (loading || !user || !isAdmin) {
     return (
@@ -29,55 +55,49 @@ export default function Sales() {
       </div>
     );
   }
+
+  // Calculate payment types from typeBreakdown
   const paymentTypes = [
-    { icon: '💳', name: 'Memberships', value: '₱72,400' },
-    { icon: '🚶', name: 'Walk-ins', value: '₱14,600' },
-    { icon: '🛒', name: 'Merchandise', value: '₱11,450' },
+    {
+      icon: '💳',
+      name: 'Memberships',
+      value: `₱${((data?.typeBreakdown['Membership'] || 0) + (data?.typeBreakdown['Renewal'] || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}`,
+    },
+    {
+      icon: '🚶',
+      name: 'Walk-ins',
+      value: `₱${(data?.typeBreakdown['Walk-in'] || 0).toLocaleString('en-US', {maximumFractionDigits: 0})}`,
+    },
+    {
+      icon: '🛒',
+      name: 'Other',
+      value: `₱${(
+        Object.entries(data?.typeBreakdown || {})
+          .filter(([k]) => !['Membership', 'Renewal', 'Walk-in'].includes(k))
+          .reduce((sum, [, v]: [string, any]) => sum + v, 0) || 0
+      ).toLocaleString('en-US', {maximumFractionDigits: 0})}`,
+    },
   ];
 
-  const paymentMethods = [
-    { name: 'Online', amount: '₱56,800', percentage: 58, color: 'accent' as const },
-    { name: 'Cash', amount: '₱40,650', percentage: 42, color: 'accent3' as const },
-  ];
+  // Calculate payment methods
+  const methodBreakdown = data?.methodBreakdown || {};
+  const totalRevenue = data?.totalRevenue || 1;
+  const paymentMethods = Object.entries(methodBreakdown).map(([method, amount]: [string, any]) => ({
+    name: method.charAt(0).toUpperCase() + method.slice(1),
+    amount: `₱${amount.toLocaleString('en-US', {maximumFractionDigits: 0})}`,
+    percentage: Math.round((amount / totalRevenue) * 100),
+    color: method === 'online' ? ('accent' as const) : ('accent3' as const),
+  }));
 
-  const transactions = [
-    {
-      id: '#TXN-2248',
-      member: 'Derek Cruz',
-      type: 'VIP Membership',
-      amount: '₱5,000',
-      method: 'Online',
-      date: 'Dec 28, 2025',
-      status: 'paid',
-    },
-    {
-      id: '#TXN-2247',
-      member: 'Carlo Reyes',
-      type: 'Renewal',
-      amount: '₱2,500',
-      method: 'Online',
-      date: 'Dec 27, 2025',
-      status: 'paid',
-    },
-    {
-      id: '#TXN-2246',
-      member: 'Rina Dela Cruz',
-      type: 'Walk-in',
-      amount: '₱150',
-      method: 'Cash',
-      date: 'Dec 27, 2025',
-      status: 'paid',
-    },
-    {
-      id: '#TXN-2245',
-      member: 'Ben Marasigan',
-      type: 'Premium',
-      amount: '₱2,000',
-      method: 'Online',
-      date: 'Dec 26, 2025',
-      status: 'pending',
-    },
-  ];
+  const transactions = (data?.topTransactions || []).map((txn: any) => ({
+    id: txn.id?.slice(0, 8).toUpperCase() || '#TXN-0000',
+    member: txn.member_name || 'Unknown',
+    type: txn.type || 'Other',
+    amount: `₱${parseFloat(txn.amount).toLocaleString('en-US', {maximumFractionDigits: 0})}`,
+    method: txn.payment_method?.charAt(0).toUpperCase() + (txn.payment_method?.slice(1) || '') || 'Cash',
+    date: new Date(txn.created_at).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}),
+    status: txn.status || 'paid',
+  })).slice(0, 4);
 
   return (
     <div className="flex flex-col h-screen bg-bg overflow-hidden">

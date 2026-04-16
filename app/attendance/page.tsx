@@ -8,18 +8,44 @@ import Topbar from '@/components/Topbar';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 
+interface AttendanceGrid {
+  memberId: string;
+  member: string;
+  month: string;
+  days: boolean[];
+  attendanceCount: number;
+  attendancePercentage: number;
+}
+
 export default function Attendance() {
   const router = useRouter();
   const { user, loading: authLoading, isAdmin } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
+  const [attendanceData, setAttendanceData] = useState<AttendanceGrid[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     if (!authLoading) {
       if (!user || !isAdmin) {
         router.push('/login');
+      } else {
+        fetchAttendanceData();
       }
     }
   }, [user, authLoading, isAdmin, router]);
+
+  const fetchAttendanceData = async () => {
+    try {
+      setDataLoading(true);
+      const response = await fetch('/api/attendance/summary');
+      const result = await response.json();
+      setAttendanceData(result.attendance || []);
+    } catch (error) {
+      console.error('Failed to fetch attendance data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   if (authLoading || !user || !isAdmin) {
     return (
@@ -36,28 +62,7 @@ export default function Attendance() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const attendanceGrids = [
-    {
-      member: 'Maria Santos',
-      month: 'December 2024',
-      days: [
-        true, true, true, false, true, true, true, false, true, true,
-        true, true, false, true, true, true, true, true, false, true,
-        true, true, true, true, false, true, true, true, true, false,
-        true,
-      ],
-    },
-    {
-      member: 'Carlo Reyes',
-      month: 'December 2024',
-      days: [
-        true, true, false, true, true, true, true, true, true, true,
-        false, true, true, true, true, true, true, false, true, true,
-        true, true, true, false, true, true, true, true, true, true,
-        false,
-      ],
-    },
-  ];
+  const attendanceGrids = attendanceData;
 
   return (
     <div className="flex flex-col h-screen bg-bg overflow-hidden">

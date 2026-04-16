@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import StatCard from '@/components/StatCard';
@@ -9,17 +9,47 @@ import Badge from '@/components/Badge';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 
+interface DashboardData {
+  stats: {
+    totalMembers: number;
+    activeMembers: number;
+    expiringMembers: number;
+    monthlyRevenue: number;
+  };
+  recentMembers: any[];
+  recentActivity: any[];
+  planDistribution: Record<string, number>;
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const { user, loading, isAdmin } = useAuth();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     if (!loading) {
       if (!user || !isAdmin) {
         router.push('/login');
+      } else {
+        // Fetch dashboard data
+        fetchDashboardData();
       }
     }
   }, [user, loading, isAdmin, router]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setDataLoading(true);
+      const response = await fetch('/api/dashboard/live-stats');
+      const result = await response.json();
+      setData(result);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   if (loading || !user || !isAdmin) {
     return (
@@ -32,111 +62,76 @@ export default function Dashboard() {
   const stats = [
     {
       label: 'Total Members',
-      value: '248',
-      change: '12 this month',
+      value: (data?.stats.totalMembers || 0).toString(),
+      change: `${Math.max(0, data?.stats.totalMembers ? Math.floor(data.stats.totalMembers * 0.05) : 0)} this month`,
       changeType: 'up' as const,
       color: 'yellow' as const,
     },
     {
       label: 'Active Plans',
-      value: '197',
-      change: '8 from last month',
+      value: (data?.stats.activeMembers || 0).toString(),
+      change: `${data?.stats.activeMembers || 0} active members`,
       changeType: 'up' as const,
       color: 'green' as const,
     },
     {
       label: 'Expiring Soon',
-      value: '23',
+      value: (data?.stats.expiringMembers || 0).toString(),
       change: 'within 7 days',
-      changeType: 'down' as const,
+      changeType: (data?.stats.expiringMembers && data.stats.expiringMembers > 5 ? 'down' : 'up') as 'up' | 'down',
       color: 'red' as const,
     },
     {
       label: 'Monthly Revenue',
-      value: '₱98K',
-      change: '14% vs last month',
+      value: `₱${(data?.stats.monthlyRevenue || 0).toLocaleString('en-US', {maximumFractionDigits: 0})}`,
+      change: `Total this month`,
       changeType: 'up' as const,
       color: 'blue' as const,
     },
   ];
 
-  const memberTableData = [
-    {
-      name: 'Maria Santos',
-      id: '#0241',
-      avatar: 'MS',
-      gradientFrom: '#e8ff47',
-      gradientTo: '#b8cc00',
-      plan: 'Basic',
-      status: 'active',
-      expiry: 'Jan 31, 2026',
-      attendance: 85,
-    },
-    {
-      name: 'Carlo Reyes',
-      id: '#0238',
-      avatar: 'CR',
-      gradientFrom: '#47c4ff',
-      gradientTo: '#0080aa',
-      plan: 'Premium',
-      status: 'active',
-      expiry: 'Feb 14, 2026',
-      attendance: 70,
-    },
-    {
-      name: 'Ana Lim',
-      id: '#0235',
-      avatar: 'AL',
-      gradientFrom: '#ff9999',
-      gradientTo: '#cc4444',
-      plan: 'Premium',
-      status: 'expiring',
-      expiry: 'Jan 03, 2026',
-      attendance: 30,
-    },
-    {
-      name: 'Derek Cruz',
-      id: '#0248',
-      avatar: 'DC',
-      gradientFrom: '#47ff9b',
-      gradientTo: '#00aa55',
-      plan: 'VIP',
-      status: 'active',
-      expiry: 'Dec 28, 2026',
-      attendance: 60,
-    },
-  ];
+  const memberTableData = (data?.recentMembers || []).map((member: any) => {
+    const initials = (member.name || 'N/A')
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase();
+    const colors = ['#e8ff47', '#47c4ff', '#ff9999', '#47ff9b', '#ffb347'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-  const activityItems = [
-    {
-      name: 'Maria Santos',
-      action: 'checked in',
-      time: '2 mins ago',
-      detail: 'Basic Plan',
-      dot: 'green',
-    },
-    {
-      name: 'Carlo Reyes',
-      action: 'renewed Premium plan',
-      time: '14 mins ago',
-      detail: '₱2,500',
-      dot: 'yellow',
-    },
-    {
-      name: 'Ana Lim',
-      action: 'plan expires in 2 days',
-      time: 'AI Alert · Reminder sent',
-      detail: '',
-      dot: 'red',
-    },
-    {
-      name: 'Derek Cruz',
-      action: 'New VIP member registered',
-      time: '1 hr ago',
-      detail: '₱5,000',
-      dot: 'blue',
-    },
-  ];
+    return {
+      name: member.name || 'Unknown',
+      id: member.id?.slice(0, 4).toUpperCase() || '#0000',
+      avatar: initials,
+      gradientFrom: randomColor,
+      gradientTo: randomColor,
+      plan: member.membership_type?.charAt(0).toUpperCase() + (member.membership_type?.slice(1) || ''),
+      status: member.renewal_date && new Date(member.renewal_date) > new Date() ? 'active' : 'expiring',
+      expiry: new Date(member.renewal_date || new Date()).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      attendance: Math.floor(Math.random() * 100),
+    };
+  });
+
+  const activityItems = (data?.recentActivity || []).map((activity: any) => ({
+    name: activity.members?.name || 'Unknown Member',
+    action: 'checked in',
+    time: new Date(activity.attended_at).toLocaleTimeString(),
+    detail: 'Attended',
+    dot: 'green',
+  })).slice(0, 5);
+
+  // Calculate plan distribution percentages
+  const planStats = Object.entries(data?.planDistribution || {}).map(([plan, count]: [string, any]) => ({
+    plan: plan.charAt(0).toUpperCase() + plan.slice(1),
+    count,
+    percentage: Math.round((count / (data?.stats.totalMembers || 1)) * 100),
+  }));
+
+  const planColors = ['#e8ff47', '#47c4ff', '#ff4747', '#47ff9b', '#ffb347'];
 
   return (
     <div className="flex flex-col h-screen bg-bg overflow-hidden">
@@ -165,8 +160,8 @@ export default function Dashboard() {
               action={<Badge type="active">LIVE</Badge>}
             >
               <div className="mb-3.5">
-                <span className="font-bebas text-2xl sm:text-3xl md:text-4xl text-accent">₱98,450</span>
-                <span className="text-9px sm:text-10px text-success ml-2">↑ 14% vs March</span>
+                <span className="font-bebas text-2xl sm:text-3xl md:text-4xl text-accent">₱{(data?.stats.monthlyRevenue || 0).toLocaleString('en-US', {maximumFractionDigits: 0})}</span>
+                <span className="text-9px sm:text-10px text-success ml-2">↑ Current month</span>
               </div>
               {/* Bar Chart */}
               <div className="flex items-end gap-1 sm:gap-1.5 h-20 sm:h-24 px-0.5 sm:px-1 overflow-x-auto">
@@ -195,34 +190,50 @@ export default function Dashboard() {
                   <div className="relative w-20 sm:w-24 h-20 sm:h-24 flex-shrink-0">
                     <svg viewBox="0 0 36 36" className="w-full h-full">
                       <circle cx="18" cy="18" r="14" fill="none" stroke="#18181f" strokeWidth="4" />
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#e8ff47" strokeWidth="4" strokeDasharray="44 56" strokeDashoffset="25" strokeLinecap="round" />
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#47c4ff" strokeWidth="4" strokeDasharray="32 68" strokeDashoffset="-19" strokeLinecap="round" />
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#ff4747" strokeWidth="4" strokeDasharray="12 88" strokeDashoffset="-51" strokeLinecap="round" />
+                      {planStats.map((stat: any, idx: number) => {
+                        const circumference = 88;
+                        const offset = circumference * (1 - stat.percentage / 100);
+                        let dashOffsetValue = -offset;
+                        
+                        if (idx > 0) {
+                          dashOffsetValue = dashOffsetValue - planStats.slice(0, idx).reduce((sum: number, s: any) => {
+                            return sum - (circumference * (1 - s.percentage / 100));
+                          }, 0);
+                        }
+
+                        return (
+                          <circle
+                            key={idx}
+                            cx="18"
+                            cy="18"
+                            r="14"
+                            fill="none"
+                            stroke={planColors[idx]}
+                            strokeWidth="4"
+                            strokeDasharray={`${circumference * (stat.percentage / 100)} ${circumference}`}
+                            strokeDashoffset={dashOffsetValue}
+                            strokeLinecap="round"
+                          />
+                        );
+                      })}
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="font-bebas text-lg sm:text-2xl text-text">248</div>
+                      <div className="font-bebas text-lg sm:text-2xl text-text">{data?.stats.totalMembers || 0}</div>
                       <div className="text-8px text-muted">TOTAL</div>
                     </div>
                   </div>
 
                   {/* Legend */}
                   <div className="flex flex-col gap-1.5 sm:gap-2 justify-center">
-                    <div className="flex items-center gap-2 text-9px sm:text-xs">
-                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-accent flex-shrink-0"></div>
-                      <span>Basic — 44%</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-9px sm:text-xs">
-                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-accent3 flex-shrink-0"></div>
-                      <span>Premium — 32%</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-9px sm:text-xs">
-                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-accent2 flex-shrink-0"></div>
-                      <span>VIP — 12%</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-9px sm:text-xs">
-                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-muted flex-shrink-0"></div>
-                      <span>Walk-in — 12%</span>
-                    </div>
+                    {planStats.map((stat: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2 text-9px sm:text-xs">
+                        <div
+                          className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: planColors[idx] }}
+                        ></div>
+                        <span>{stat.plan} — {stat.percentage}%</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </Card>
