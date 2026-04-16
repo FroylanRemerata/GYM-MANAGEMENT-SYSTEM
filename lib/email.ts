@@ -3,11 +3,18 @@ import { Resend } from 'resend';
 let resend: Resend | null = null;
 
 function getResendClient(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  
+  // Check if API key is missing or placeholder
+  if (!apiKey || apiKey === 'your_resend_api_key_here' || !apiKey.startsWith('re_')) {
+    throw new Error(
+      'Invalid Resend API key. Please add a valid RESEND_API_KEY to your .env.local file. ' +
+      'Get one from https://resend.com'
+    );
+  }
+
   if (!resend) {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error('Missing API key. Pass RESEND_API_KEY to environment variables.');
-    }
-    resend = new Resend(process.env.RESEND_API_KEY);
+    resend = new Resend(apiKey);
   }
   return resend;
 }
